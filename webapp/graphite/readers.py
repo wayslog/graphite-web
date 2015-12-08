@@ -233,6 +233,8 @@ class WhisperReader(object):
 
       try:
         i = int(interval - start) / step
+        if i < 0:
+            continue
         values[i] = value
       except:
         pass
