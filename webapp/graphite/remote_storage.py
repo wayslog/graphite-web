@@ -1,7 +1,7 @@
 import time
 import httplib
 from urllib import urlencode
-from threading import RLock, Event, Lock
+from threading import Lock, Event
 from django.conf import settings
 from django.core.cache import cache
 from graphite.node import LeafNode, BranchNode
@@ -234,7 +234,7 @@ class RemoteReader(object):
     self.cache_lock.acquire()
     try:
       if url not in self.request_locks:
-        self.request_locks[url] = (RLock(), RLock(), Event())
+        self.request_locks[url] = (Lock(), Lock(), Event())
         self.request_times[url] = time.time()
       return self.request_locks[url]
     finally:
