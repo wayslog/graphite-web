@@ -13,6 +13,10 @@ from graphite.node import LeafNode
 from graphite.intervals import Interval, IntervalSet
 from graphite.readers import MultiReader
 
+_MAX_QUERY_LIMIT = 100 or settings.MAX_QUERY_LIMIT
+
+class MatchesOverflowError(Exception):
+  pass
 
 def get_finder(finder_path):
   module_name, class_name = finder_path.rsplit('.', 1)
@@ -65,7 +69,7 @@ class Store:
 
     # Reduce matching nodes for each path to a minimal set
     found_branch_nodes = set()
-
+    leaf_nodes_count = 0
     for path, nodes in nodes_by_path.iteritems():
       leaf_nodes = []
 
@@ -73,12 +77,17 @@ class Store:
       for node in nodes:
         if node.is_leaf:
           leaf_nodes.append(node)
+          leaf_nodes_count += 1
         elif node.path not in found_branch_nodes: #TODO need to filter branch nodes based on requested interval... how?!?!?
           yield node
           found_branch_nodes.add(node.path)
 
       if not leaf_nodes:
         continue
+
+      if len(matching_nodes) > _MAX_QUERY_LIMIT:
+        # How to Break
+        raise MatchesOverflowError()
 
       # Calculate best minimal node set
       minimal_node_set = set()

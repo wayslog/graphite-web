@@ -17,7 +17,7 @@ from django.conf import settings
 from graphite.compat import HttpResponse, HttpResponseBadRequest
 from graphite.util import getProfile, json
 from graphite.logger import log
-from graphite.storage import STORE
+from graphite.storage import STORE, MatchesOverflowError
 from graphite.carbonlink import CarbonLink
 import fnmatch, os
 
@@ -107,6 +107,11 @@ def find_view(request):
 
   try:
     matches = list( STORE.find(query, fromTime, untilTime, local=local_only) )
+  except MatchesOverflowError:
+    log.exception('find too much node greater than MAX_QUERY_LIMIT')
+    return HttpResponseBadRequest(
+      content="Query too much node, refuse",
+      content_type="text/plain")
   except:
     log.exception()
     raise
