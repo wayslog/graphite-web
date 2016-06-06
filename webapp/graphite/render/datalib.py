@@ -13,7 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License."""
 
 from graphite.logger import log
-from graphite.storage import STORE
+from graphite.storage import STORE, MatchesOverflowError
 from graphite.readers import FetchInProgress
 from django.conf import settings
 from graphite.util import epoch
@@ -135,6 +135,8 @@ def fetchData(requestContext, pathExpr):
     try:
       seriesList = _fetchData(pathExpr,startTime, endTime, requestContext, seriesList)
       return seriesList
+    except MatchesOverflowError:
+      raise Exception("Find too much nodes in this query Pattern : %s" % (pathExpr,))
     except Exception, e:
       if retries >= settings.MAX_FETCH_RETRIES:
         log.exception("Failed after %i retry! See: %s" % (settings.MAX_FETCH_RETRIES, e))
