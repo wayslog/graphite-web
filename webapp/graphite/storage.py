@@ -94,7 +94,7 @@ class Store:
 
       if leaf_nodes_count > MAX_QUERY_LIMIT:
         # append into log
-        metric = query.pattern.replace(".", "_").replace("*", "start")
+        metric = query.pattern.replace(".", "_").replace("*", "star")
         send_to_carbon(metric, leaf_nodes_count)
         raise MatchesOverflowError()
       # Calculate best minimal node set
