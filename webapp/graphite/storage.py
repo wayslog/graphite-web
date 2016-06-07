@@ -16,6 +16,15 @@ from graphite.readers import MultiReader
 from graphite.logger import log
 
 
+def send_to_carbon(metric, value):
+  import socket
+  address = ('127.0.0.1', 2003)
+  s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+  s.connect(address)
+  s.send("%s %d %d\n" % (metric, value, time.time()))
+  s.close()
+
+
 def get_finder(finder_path):
   module_name, class_name = finder_path.rsplit('.', 1)
   module = import_module(module_name)
@@ -85,7 +94,8 @@ class Store:
 
       if leaf_nodes_count > MAX_QUERY_LIMIT:
         # append into log
-        log.limit("metric=%s limit=%d", (query, leaf_nodes_count))
+        metric = query.pattern.replace(".", "_").replace("*", "start")
+        send_to_carbon(metric, leaf_nodes_count)
         raise MatchesOverflowError()
       # Calculate best minimal node set
       minimal_node_set = set()
