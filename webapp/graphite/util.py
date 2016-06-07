@@ -250,3 +250,7 @@ def build_index(base_path, extension, fd):
   fd.flush()
   log.info("[IndexSearcher] index rebuild of \"%s\" took %.6f seconds (%d entries)" % (base_path, time.time() - t, total_entries))
   return None
+
+MAX_QUERY_LIMIT = 800 or settings.MAX_QUERY_LIMIT
+class MatchesOverflowError(Exception):
+  pass

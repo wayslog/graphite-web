@@ -13,10 +13,10 @@ See the License for the specific language governing permissions and
 limitations under the License."""
 
 from graphite.logger import log
-from graphite.storage import STORE, MatchesOverflowError
+from graphite.storage import STORE
 from graphite.readers import FetchInProgress
 from django.conf import settings
-from graphite.util import epoch
+from graphite.util import epoch, MatchesOverflowError
 
 class TimeSeries(list):
   def __init__(self, name, start, end, step, values, consolidate='average'):

@@ -31,6 +31,7 @@ from django.conf import settings
 
 logging.addLevelName(30,"rendering")
 logging.addLevelName(30,"cache")
+logging.addLevelName(30, "limit")
 
 class GraphiteLogger:
   def __init__(self):
@@ -51,6 +52,10 @@ class GraphiteLogger:
                                                'rendering',
                                                settings.LOG_RENDERING_PERFORMANCE,
                                                )
+    self.limitLogger = self._config_logger('limit.log',
+                                           'limit',
+                                           settings.LOG_LIMIT_PERFORMANCE,
+                                          )
 
   @staticmethod
   def _config_logger(log_file_name, name, activate,
@@ -83,5 +88,7 @@ class GraphiteLogger:
   def rendering(self,msg,*args,**kwargs):
     return self.renderingLogger.log(30,msg,*args,**kwargs)
 
+  def limit(self,msg,*args,**kwargs):
+      return self.limitLogger.log(30, msg, *args, **kwargs)
 
 log = GraphiteLogger() # import-shared logger instance

@@ -6,7 +6,6 @@ from graphite.logger import log
 from graphite.node import BranchNode, LeafNode
 from graphite.readers import WhisperReader, GzippedWhisperReader, RRDReader
 from graphite.util import find_escaped_pattern_fields
-
 from . import fs_to_metric, get_real_metric_path, match_entries
 
 
@@ -22,10 +21,21 @@ class StandardFinder:
     pattern_parts = clean_pattern.split('.')
 
     for root_dir in self.directories:
-      for absolute_path in self._find_paths(root_dir, pattern_parts):
+      fp_generator = self._find_paths(root_dir, pattern_parts)
+      while 1:
+        absolute_path = fp_generator.next()
+        if not absolute_path:
+          break
+        # NOTICE: this is not effective
+        # raise a exception to break the generator
+        # it's very effective to break here
+        # but for count reason, this break whill be move to Store.find
+        # if node_count > MAX_QUERY_LIMIT:
+        #   # append into log
+        #   raise MatchesOverflowError()
+
         if basename(absolute_path).startswith('.'):
           continue
-
         if self.DATASOURCE_DELIMITER in basename(absolute_path):
           (absolute_path, datasource_pattern) = absolute_path.rsplit(self.DATASOURCE_DELIMITER, 1)
         else:

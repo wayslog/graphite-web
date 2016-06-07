@@ -15,9 +15,9 @@ from urllib2 import urlopen
 
 from django.conf import settings
 from graphite.compat import HttpResponse, HttpResponseBadRequest
-from graphite.util import getProfile, json
+from graphite.util import getProfile, json, MatchesOverflowError
 from graphite.logger import log
-from graphite.storage import STORE, MatchesOverflowError
+from graphite.storage import STORE
 from graphite.carbonlink import CarbonLink
 import fnmatch, os
 
