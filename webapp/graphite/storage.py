@@ -21,7 +21,7 @@ def send_to_carbon(metric, value):
   address = ('127.0.0.1', 2003)
   s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
   s.connect(address)
-  s.send("%s %d %d\n" % (metric, value, time.time()))
+  s.send("graphite.limit.%s %d %d\n" % (metric, value, time.time()))
   s.close()
 
 
