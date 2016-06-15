@@ -33,11 +33,17 @@ try:
   from cStringIO import StringIO
 except ImportError:
   from StringIO import StringIO
-
 from django.conf import settings
 from django.contrib.auth.models import User
 from graphite.account.models import Profile
 from graphite.logger import log
+
+try:
+  import redis
+  redis.StrictRedis()
+  r = redis.StrictRedis(**settings.REDIS_ADDRES)
+except ImportError:
+  redis = None
 
 
 # There are a couple different json modules floating around out there with
@@ -250,3 +256,10 @@ def build_index(base_path, extension, fd):
   fd.flush()
   log.info("[IndexSearcher] index rebuild of \"%s\" took %.6f seconds (%d entries)" % (base_path, time.time() - t, total_entries))
   return None
+
+
+def limit_report(clean_query, count):
+  if redis:
+    val = r.get(clean_query)
+    if not val or int(val) < count:
+      r.set(clean_query, count)
