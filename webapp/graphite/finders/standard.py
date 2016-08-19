@@ -9,10 +9,11 @@ from graphite.util import find_escaped_pattern_fields, limit_report
 
 from . import fs_to_metric, get_real_metric_path, match_entries
 
+
 def leaf_limit_checker(query, count):
   if count > settings.MAX_QUERY_LEAFNODE:
     clean_query = query.replace(".", "-").replace("*", "star")
-    limit_report(clean_query, count)
+    limit_report("QUERY_LIMIT" + clean_query, count)
 
 
 class StandardFinder:
