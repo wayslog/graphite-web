@@ -40,7 +40,6 @@ from graphite.logger import log
 
 try:
   import redis
-  redis.StrictRedis()
   r = redis.StrictRedis(**settings.REDIS_ADDRES)
 except ImportError:
   redis = None

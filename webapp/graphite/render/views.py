@@ -34,12 +34,13 @@ from graphite.logger import log
 from graphite.render.evaluator import evaluateTarget
 from graphite.render.attime import parseATTime
 from graphite.render.functions import PieFunctions
-from graphite.render.hashing import hashRequest, hashData
+from graphite.render.rcache import hashData, cache
+from graphite.render.hashing import hashRequest
 from graphite.render.glyph import GraphTypes
 
 from django.http import HttpResponseServerError, HttpResponseRedirect
 from django.template import Context, loader
-from django.core.cache import cache
+# from django.core.cache import cache
 from django.core.exceptions import ObjectDoesNotExist
 from django.conf import settings
 from django.utils.cache import add_never_cache_headers, patch_response_headers
