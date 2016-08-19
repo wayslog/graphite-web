@@ -28,8 +28,11 @@ except ImportError:
 
 
 def index_json(request):
-  jsonp = request.REQUEST.get('jsonp', False)
-  cluster = request.REQUEST.get('cluster', False)
+  queryParams = request.GET.copy()
+  queryParams.update(request.POST)
+
+  jsonp = queryParams.get('jsonp', False)
+  cluster = queryParams.get('cluster', False)
 
   def find_matches():
     matches = []
@@ -77,6 +80,7 @@ def find_view(request):
   wildcards = int( queryParams.get('wildcards', 0) )
   fromTime = int( queryParams.get('from', -1) )
   untilTime = int( queryParams.get('until', -1) )
+  nodePosition = int( queryParams.get('position', -1) )
   jsonp = queryParams.get('jsonp', False)
 
   if fromTime == -1:
@@ -123,6 +127,10 @@ def find_view(request):
     content = tree_json(matches, base_path, wildcards=profile.advancedUI or wildcards)
     response = json_response_for(request, content)
 
+  elif format == 'nodelist':
+    content = nodes_by_position(matches, nodePosition)
+    response = json_response_for(request, content)
+
   elif format == 'pickle':
     content = pickle_nodes(matches)
     response = HttpResponse(content, content_type='application/pickle')
@@ -153,12 +161,15 @@ def find_view(request):
 
 def expand_view(request):
   "View for expanding a pattern into matching metric paths"
-  local_only    = int( request.REQUEST.get('local', 0) )
-  group_by_expr = int( request.REQUEST.get('groupByExpr', 0) )
-  leaves_only   = int( request.REQUEST.get('leavesOnly', 0) )
+  queryParams = request.GET.copy()
+  queryParams.update(request.POST)
+
+  local_only = int( queryParams.get('local', 0) )
+  group_by_expr = int( queryParams.get('groupByExpr', 0) )
+  leaves_only = int( queryParams.get('leavesOnly', 0) )
 
   results = {}
-  for query in request.REQUEST.getlist('query'):
+  for query in queryParams.getlist('query'):
     results[query] = set()
     for node in STORE.find(query, local=local_only):
       if node.is_leaf or not leaves_only:
@@ -182,8 +193,11 @@ def expand_view(request):
 
 
 def get_metadata_view(request):
-  key = request.REQUEST['key']
-  metrics = request.REQUEST.getlist('metric')
+  queryParams = request.GET.copy()
+  queryParams.update(request.POST)
+
+  key = queryParams.get('key')
+  metrics = queryParams.getlist('metric')
   results = {}
   for metric in metrics:
     try:
@@ -278,6 +292,16 @@ def tree_json(nodes, base_path, wildcards=False):
 
   results.extend(results_branch)
   results.extend(results_leaf)
+  return results
+
+
+def nodes_by_position(matches, position):
+  found = set()
+
+  for metric in matches:
+    nodes = metric.path.split('.')
+    found.add(nodes[position])
+  results = { 'nodes' : sorted(found) }
   return results
 
 

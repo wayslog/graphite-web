@@ -82,6 +82,14 @@ Forwarding
 `Evenflow`_
   A simple service for submitting sFlow datagrams to Graphite. It accepts sFlow datagrams from multiple network devices and proxies the data to a Carbon listener. Currently only Generic Interface Counters are supported. All other message types are discarded.
 
+`Grafsy`_
+  Very light caching proxy for graphite metrics with additional features:
+  
+  - Caching metrics in case of outage and sending them later
+  - Validation of metrics
+  - Aggregating of metrics, including SUM and AVG functions
+  - Much more
+
 `Graphite-Newrelic`_
   Get your graphite data into `New Relic`_ via a New Relic Platform plugin.
 
@@ -105,6 +113,9 @@ Forwarding
 
 `pipe-to-graphite`_
   A small shell script that makes it easy to report the output of any other cli program to Graphite.
+
+`Polymur`_
+  A fast relay and HTTPS forwarder toolset written in Go.
 
 `statsd`_
   A simple daemon for easy stats aggregation, developed by the folks at Etsy. A list of forks and alternative implementations can be found at <http://joemiller.me/2011/09/21/list-of-statsd-server-implementations/>
@@ -284,7 +295,7 @@ Other
 .. _Cyanite: http://cyanite.io/
 .. _D3.js: http://mbostock.github.com/d3
 .. _Descartes: https://github.com/obfuscurity/descartes
-.. _Diamond: http://opensource.brightcove.com/project/Diamond
+.. _Diamond: https://diamond.readthedocs.io/en/latest/
 .. _Dusk: https://github.com/obfuscurity/dusk
 .. _Esper: http://esper.codehaus.org
 .. _Evenflow: https://github.com/github/evenflow
@@ -294,6 +305,7 @@ Other
 .. _Giraffe: http://kenhub.github.com/giraffe
 .. _go-carbon: https://github.com/lomik/go-carbon
 .. _Grafana: http://grafana.org
+.. _Grafsy: https://github.com/leoleovich/grafsy
 .. _Graphene: http://jondot.github.com/graphene
 .. _Graphios: https://github.com/shawn-sterling/graphios
 .. _graphite-beacon: https://github.com/klen/graphite-beacon
@@ -326,10 +338,11 @@ Other
 .. _OpenTSDB: http://opentsdb.net/
 .. _Orion: https://github.com/gree/Orion
 .. _metrics-sampler: https://github.com/dimovelev/metrics-sampler
-.. _Moira: http://moira.readthedocs.org
+.. _Moira: http://moira.readthedocs.io
 .. _New Relic: https://newrelic.com/platform
 .. _Pencil: https://github.com/fetep/pencil
 .. _pipe-to-graphite: https://github.com/iFixit/pipe-to-graphite
+.. _Polymur: https://github.com/jamiealquiza/polymur
 .. _RabbitMQ: http://www.rabbitmq.com
 .. _rearview: http://github.com/livingsocial/rearview
 .. _Rickshaw: http://code.shutterstock.com/rickshaw

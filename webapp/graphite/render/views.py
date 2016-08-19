@@ -56,6 +56,7 @@ def renderView(request):
     'endTime' : requestOptions['endTime'],
     'localOnly' : requestOptions['localOnly'],
     'template' : requestOptions['template'],
+    'tzinfo' : requestOptions['tzinfo'],
     'data' : []
   }
   data = requestContext['data']
@@ -155,6 +156,15 @@ def renderView(request):
             timestamps = range(int(series.start), int(series.end) + 1, int(series.step))
           datapoints = zip(series, timestamps)
           series_data.append(dict(target=series.name, datapoints=datapoints))
+      elif 'noNullPoints' in requestOptions and any(data):
+        for series in data:
+          values = []
+          for (index,v) in enumerate(series):
+            if v is not None:
+              timestamp = series.start + (index * series.step)
+              values.append((v,timestamp))
+          if len(values) > 0:
+            series_data.append(dict(target=series.name, datapoints=values))
       else:
         for series in data:
           timestamps = range(int(series.start), int(series.end) + 1, int(series.step))
@@ -176,11 +186,53 @@ def renderView(request):
         add_never_cache_headers(response)
       return response
 
+    if format == 'dygraph':
+      labels = ['Time']
+      result = '{}'
+      if data:
+        datapoints = [[ts] for ts in range(data[0].start, data[0].end, data[0].step)]
+        for series in data:
+          labels.append(series.name)
+          for i, point in enumerate(series):
+            datapoints[i].append(point if point is not None else 'null')
+        line_template = '[%%s000%s]' % ''.join([', %s'] * len(data))
+        lines = [line_template % tuple(points) for points in datapoints]
+        result = '{"labels" : %s, "data" : [%s]}' % (json.dumps(labels), ', '.join(lines))
+      response = HttpResponse(content=result, content_type='application/json')
+
+      if useCache:
+        cache.add(requestKey, response, cacheTimeout)
+        patch_response_headers(response, cache_timeout=cacheTimeout)
+      else:
+        add_never_cache_headers(response)
+      return response
+
+    if format == 'rickshaw':
+      series_data = []
+      for series in data:
+        timestamps = range(series.start, series.end, series.step)
+        datapoints = [{'x' : x, 'y' : y} for x, y in zip(timestamps, series)]
+        series_data.append( dict(target=series.name, datapoints=datapoints) )
+      if 'jsonp' in requestOptions:
+        response = HttpResponse(
+          content="%s(%s)" % (requestOptions['jsonp'], json.dumps(series_data)),
+          mimetype='text/javascript')
+      else:
+        response = HttpResponse(content=json.dumps(series_data),
+                                content_type='application/json')
+
+      if useCache:
+        cache.add(requestKey, response, cacheTimeout)
+        patch_response_headers(response, cache_timeout=cacheTimeout)
+      else:
+        add_never_cache_headers(response)
+      return response
+
     if format == 'raw':
       response = HttpResponse(content_type='text/plain')
       for series in data:
         response.write( "%s,%d,%d,%d|" % (series.name, series.start, series.end, series.step) )
-        response.write( ','.join(map(str,series)) )
+        response.write( ','.join(map(repr,series)) )
         response.write('\n')
 
       log.rendering('Total rawData rendering time %.6f' % (time() - start))
@@ -188,6 +240,8 @@ def renderView(request):
 
     if format == 'svg':
       graphOptions['outputFormat'] = 'svg'
+    elif format == 'pdf':
+      graphOptions['outputFormat'] = 'pdf'
 
     if format == 'pickle':
       response = HttpResponse(content_type='application/pickle')
@@ -210,6 +264,8 @@ def renderView(request):
     response = HttpResponse(
       content="%s(%s)" % (requestOptions['jsonp'], json.dumps(image)),
       content_type='text/javascript')
+  elif graphOptions.get('outputFormat') == 'pdf':
+    response = buildResponse(image, 'application/x-pdf')
   else:
     response = buildResponse(image, 'image/svg+xml' if useSVG else 'image/png')
 
@@ -274,6 +330,8 @@ def parseOptions(request):
     requestOptions['noCache'] = True
   if 'maxDataPoints' in queryParams and queryParams['maxDataPoints'].isdigit():
     requestOptions['maxDataPoints'] = int(queryParams['maxDataPoints'])
+  if 'noNullPoints' in queryParams:
+    requestOptions['noNullPoints'] = True
 
   requestOptions['localOnly'] = queryParams.get('local') == '1'
 
