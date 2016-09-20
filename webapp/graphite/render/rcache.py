@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+
 import time
 from graphite.render.hashing import compactHash
 from graphite.logger import log

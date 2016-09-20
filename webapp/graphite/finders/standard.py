@@ -5,15 +5,9 @@ from django.conf import settings
 from graphite.logger import log
 from graphite.node import BranchNode, LeafNode
 from graphite.readers import WhisperReader, GzippedWhisperReader, RRDReader
-from graphite.util import find_escaped_pattern_fields, limit_report
+from graphite.util import find_escaped_pattern_fields
 
 from . import fs_to_metric, get_real_metric_path, match_entries
-
-
-def leaf_limit_checker(query, count):
-  if count > settings.MAX_QUERY_LEAFNODE:
-    clean_query = query.replace(".", "-").replace("*", "star")
-    limit_report("QUERY_LIMIT" + clean_query, count)
 
 
 class StandardFinder:
@@ -26,7 +20,6 @@ class StandardFinder:
   def find_nodes(self, query):
     clean_pattern = query.pattern.replace('\\', '')
     pattern_parts = clean_pattern.split('.')
-    leaf_node_counter = 0
 
     for root_dir in self.directories:
       for absolute_path in self._find_paths(root_dir, pattern_parts):
@@ -54,12 +47,10 @@ class StandardFinder:
         elif isfile(absolute_path):
           if absolute_path.endswith('.wsp') and WhisperReader.supported:
             reader = WhisperReader(absolute_path, real_metric_path)
-            leaf_node_counter += 1
             yield LeafNode(metric_path, reader)
 
           elif absolute_path.endswith('.wsp.gz') and GzippedWhisperReader.supported:
             reader = GzippedWhisperReader(absolute_path, real_metric_path)
-            leaf_node_counter += 1
             yield LeafNode(metric_path, reader)
 
           elif absolute_path.endswith('.rrd') and RRDReader.supported:
@@ -70,10 +61,8 @@ class StandardFinder:
               for datasource_name in RRDReader.get_datasources(absolute_path):
                 if match_entries([datasource_name], datasource_pattern):
                   reader = RRDReader(absolute_path, datasource_name)
-                  leaf_node_counter += 1
                   yield LeafNode(metric_path + "." + datasource_name, reader)
 
-    leaf_limit_checker(clean_pattern, leaf_node_counter)
 
   def _find_paths(self, current_dir, patterns):
     """Recursively generates absolute paths whose components underneath current_dir

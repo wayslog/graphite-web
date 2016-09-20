@@ -256,9 +256,3 @@ def build_index(base_path, extension, fd):
   log.info("[IndexSearcher] index rebuild of \"%s\" took %.6f seconds (%d entries)" % (base_path, time.time() - t, total_entries))
   return None
 
-
-def limit_report(clean_query, count):
-  if redis:
-    val = r.get(clean_query)
-    if not val or int(val) < count:
-      r.set(clean_query, count)
