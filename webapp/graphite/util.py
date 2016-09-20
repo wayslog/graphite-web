@@ -38,12 +38,6 @@ from django.contrib.auth.models import User
 from graphite.account.models import Profile
 from graphite.logger import log
 
-try:
-  import redis
-  r = redis.StrictRedis(**settings.REDIS_ADDRES)
-except ImportError:
-  redis = None
-
 
 # There are a couple different json modules floating around out there with
 # different APIs. Hide the ugliness here.
