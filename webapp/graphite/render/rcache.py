@@ -29,7 +29,7 @@ def hashData(targets, start, end):
     start_str = epoch_time(start, cache_interval)
     end_str = epoch_time(end, cache_interval)
     hash_key = target_str + "@" + start_str + ":" + end_str
-    return compactHash(hash_key)
+    return REDIS_LOCAL_PREFIX + compactHash(hash_key)
 
 
 def epoch_time(t, interval):
@@ -71,7 +71,7 @@ class RedisCache(object):
     def add(self, key, data, expire=10):
         if not self.redis: return
         try:
-            self.redis.set(REDIS_LOCAL_PREFIX + key, pickle.dumps(data), ex=expire)
+            self.redis.set(key, pickle.dumps(data), ex=expire)
         except redis.ConnectionError:
             self.reconnect()
 
@@ -79,7 +79,7 @@ class RedisCache(object):
         """get a value or get None"""
         if not self.redis: return
         try:
-            data_str = self.redis.get(REDIS_LOCAL_PREFIX + key)
+            data_str = self.redis.get(key)
         except redis.ConnectionError:
             self.reconnect()
         if not data_str: return
