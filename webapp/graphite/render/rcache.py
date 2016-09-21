@@ -68,7 +68,7 @@ class RedisCache(object):
            or self.reconnect_count <= REDIS_RECONNECT_LIMIT:
             self.reconnect()
 
-    def add(self, key, data, expire=10):
+    def add(self, key, data, expire=cache_interval):
         if not self.redis: return
         try:
             self.redis.set(key, pickle.dumps(data), ex=expire)
