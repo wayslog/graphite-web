@@ -11,7 +11,8 @@ try:
 except ImportError:
     import pickle
 try:
-    from graphite.settings import cache_interval
+    from graphite.settings import CACHE_INTERVAL
+    cache_interval = CACHE_INTERVAL
 except ImportError:
     cache_interval = 10
 try:
