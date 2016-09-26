@@ -14,6 +14,7 @@ limitations under the License."""
 import csv
 import math
 import pytz
+import time
 from datetime import datetime
 from time import time
 from random import shuffle
@@ -34,7 +35,7 @@ from graphite.logger import log
 from graphite.render.evaluator import evaluateTarget
 from graphite.render.attime import parseATTime
 from graphite.render.functions import PieFunctions
-from graphite.render.rcache import hashData, cache
+from graphite.render.rcache import hashData, cache, epoch_time
 from graphite.render.hashing import hashRequest
 from graphite.render.glyph import GraphTypes
 
@@ -51,6 +52,7 @@ def renderView(request):
   (graphOptions, requestOptions) = parseOptions(request)
   useCache = 'noCache' not in requestOptions
   cacheTimeout = requestOptions['cacheTimeout']
+  cacheTimeoutAt = epoch_time(time.time() + cacheTimeout)
   requestContext = {
     'startTime' : requestOptions['startTime'],
     'endTime' : requestOptions['endTime'],
@@ -115,7 +117,7 @@ def renderView(request):
         data.extend(seriesList)
 
       if useCache:
-        cache.add(dataKey, data, cacheTimeout)
+        cache.add(dataKey, data, cacheTimeoutAt)
 
     # If data is all we needed, we're done
     format = requestOptions.get('format')
@@ -135,6 +137,7 @@ def renderView(request):
       if 'maxDataPoints' in requestOptions and any(data):
         startTime = min([series.start for series in data])
         endTime = max([series.end for series in data])
+
         timeRange = endTime - startTime
         maxDataPoints = requestOptions['maxDataPoints']
         for series in data:
@@ -170,7 +173,7 @@ def renderView(request):
                                 content_type='application/json')
 
       if useCache:
-        cache.add(requestKey, response, cacheTimeout)
+        cache.add(requestKey, response, cacheTimeoutAt)
         patch_response_headers(response, cache_timeout=cacheTimeout)
       else:
         add_never_cache_headers(response)
@@ -214,7 +217,7 @@ def renderView(request):
     response = buildResponse(image, 'image/svg+xml' if useSVG else 'image/png')
 
   if useCache:
-    cache.add(requestKey, response, cacheTimeout)
+    cache.add(requestKey, response, cacheTimeoutAt)
     patch_response_headers(response, cache_timeout=cacheTimeout)
   else:
     add_never_cache_headers(response)

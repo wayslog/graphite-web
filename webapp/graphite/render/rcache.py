@@ -20,26 +20,33 @@ try:
 except ImportError:
     redis = None
 
+
 REDIS_RECONNECT_INTEVAL = 300
 REDIS_RECONNECT_LIMIT = 16
 REDIS_LOCAL_PREFIX = (socket.gethostname() or "UnKownHost") + "_SP_"
 
+
 def hashData(targets, start, end):
     target_str = ",".join(sorted(targets))
-    start_str = epoch_time(start, cache_interval)
-    end_str = epoch_time(end, cache_interval)
+    start_str = epoch_time_str(start)
+    end_str = epoch_time_str(end)
     hash_key = target_str + "@" + start_str + ":" + end_str
     return REDIS_LOCAL_PREFIX + compactHash(hash_key)
 
 
-def epoch_time(t, interval):
+def epoch_time(timestamp, interval=cache_interval):
+    "caculate the up top timestamp by each interval"
+    return (int(timestamp)/interval + 1)*interval
+
+
+def epoch_time_str(t):
     """
     >>> import datetime
-    >>> epoch_time(datetime.datetime(2008, 11, 10, 17, 53, 59), 10)
+    >>> epoch_time_str(datetime.datetime(2008, 11, 10, 17, 53, 59), 10)
     '1226310830'
     """
     ts = time.mktime(t.timetuple())
-    return "{}".format((int(ts)/interval)*interval)
+    return "{}".format(epoch_time(ts))
 
 
 class RedisCache(object):
@@ -68,10 +75,10 @@ class RedisCache(object):
            or self.reconnect_count <= REDIS_RECONNECT_LIMIT:
             self.reconnect()
 
-    def add(self, key, data, expire=cache_interval):
-        if not self.redis: return
+    def add(self, key, data, expire_at):
         try:
-            self.redis.set(key, pickle.dumps(data), ex=expire)
+            self.redis.set(key, pickle.dumps(data))
+            self.redis.expireat(key, expire_at)
         except redis.ConnectionError:
             self.reconnect()
 
