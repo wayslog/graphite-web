@@ -1,37 +1,34 @@
-import time
-import redis
+try:
+    from graphite.settings import SPINLOCK_ADDRESS
+except ImportError:
+    SPINLOCK_ADDRESS = [{"host": "localhost", "port": 6379, "db": 1}]
 
-SPINLOCK_TIMEOUT = 60
+from redlock import Redlock
+
+SPINLOCK_TIMEOUT = 30
 SPINLOCK_INTERVAL = 0.01
+SPINLOCK_PREFIX = "spinlock_"
 
-redis_client = redis.StrictRedis(host="localhost", port=6379)
+redlock = Redlock(SPINLOCK_ADDRESS)
 
 
 class SpinLock(object):
     def __init__(self, lock_key):
         "SpinLock is a destribute locker implemet by redis."
-        self.lock = 0
-        self.lock_timeout = 0
-        self.lock_key = lock_key
+        self.lock_key = SPINLOCK_PREFIX + lock_key
+        self.locker = None
 
     def acquire(self):
-        while self.lock != 1:
-            now = int(time.time())
-            self.lock_timeout = now + SPINLOCK_TIMEOUT + 1
-            self.lock = redis_client.setnx(self.lock_key, self.lock_timeout)
-            lock_val = redis_client.get(self.lock_key)
-            if not lock_val:
-                continue
-            if self.lock == 1 or (now > int(lock_val)) and now > int(
-                    redis_client.getset(self.lock_key, self.lock_timeout)):
-                break
-            else:
-                time.sleep(SPINLOCK_INTERVAL)
+        while not self.locker:
+            self.locker = redlock.lock(self.lock_key, SPINLOCK_TIMEOUT * 1000)
 
     def release(self):
-        now = int(time.time())
-        if now < self.lock_timeout:
-            redis_client.delete(self.lock_key)
+        if self.locker:
+            redlock.unlock(self.locker)
+            self.locker = None
+
+    def __del__(self):
+        self.release()
 
     def __enter__(self):
         """ Add with support """

@@ -4,7 +4,6 @@ import socket
 import time
 
 from graphite.render.hashing import compactHash
-from graphite.render.spinlock import SpinLock
 from graphite.logger import log
 
 try:
@@ -89,8 +88,7 @@ class RedisCache(object):
             self.reconnect()
 
     def add(self, key, data, expire_at):
-        with SpinLock(key):
-            self.add(key, data, expire_at)
+        self.add(key, data, expire_at)
 
     def _get(self, key):
         """get a value or get None"""
@@ -106,8 +104,7 @@ class RedisCache(object):
             log.exception("redis-cache catch an unkonw error: %s" % e)
 
     def get(self, key):
-        with SpinLock(key):
-            return self._get(key)
+        return self._get(key)
 
 
 cache = RedisCache()
