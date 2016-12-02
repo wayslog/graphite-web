@@ -84,6 +84,7 @@ class TimeSeries(list):
       'name' : self.name,
       'start' : self.start,
       'end' : self.end,
+
       'step' : self.step,
       'values' : list(self),
     }

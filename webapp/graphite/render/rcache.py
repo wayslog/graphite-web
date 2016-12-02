@@ -1,43 +1,46 @@
 # -*- coding: utf-8 -*-
 
-
-import time
-from graphite.render.hashing import compactHash
-from graphite.logger import log
 import socket
+import time
+
+from graphite.render.hashing import compactHash
+from graphite.render.spinlock import SpinLock
+from graphite.logger import log
 
 try:
     import cPickle as pickle
 except ImportError:
     import pickle
+
 try:
     from graphite.settings import CACHE_INTERVAL
     cache_interval = CACHE_INTERVAL
 except ImportError:
     cache_interval = 10
+
 try:
     from graphite.settings import REDIS_ADDRES
     import redis
 except ImportError:
     redis = None
 
-
 REDIS_RECONNECT_INTEVAL = 300
 REDIS_RECONNECT_LIMIT = 16
 REDIS_LOCAL_PREFIX = (socket.gethostname() or "UnKownHost") + "_SP_"
 
 
-def hashData(targets, start, end):
+def hashData(targets, start, end, prefix=False):
     target_str = ",".join(sorted(targets))
     start_str = epoch_time_str(start)
     end_str = epoch_time_str(end)
     hash_key = target_str + "@" + start_str + ":" + end_str
-    return REDIS_LOCAL_PREFIX + compactHash(hash_key)
+    prefix = REDIS_LOCAL_PREFIX if prefix else ""
+    return prefix + compactHash(hash_key)
 
 
 def epoch_time(timestamp, interval=cache_interval):
     "caculate the up top timestamp by each interval"
-    return (int(timestamp)/interval + 1)*interval
+    return (int(timestamp) / interval + 1) * interval
 
 
 def epoch_time_str(t):
@@ -56,7 +59,8 @@ class RedisCache(object):
         self.redis = None if not redis else redis.StrictRedis(**REDIS_ADDRES)
         self.reconnect_count = 0
         self.latest_loss_connection = time.time()
-        self.suffix = "host"
+        # clean all the lock
+        # self.redis.flushall()
 
     def _reconnect(self):
         try:
@@ -65,7 +69,8 @@ class RedisCache(object):
             self.latest_loss_connection = time.time()
         except redis.exceptions.ConnectionError as e:
             if self.reconnect_count == REDIS_RECONNECT_LIMIT:
-                log.exception("redis-cache connect faild, error:%s" % e.message)
+                log.exception("redis-cache connect faild, error:%s" %
+                              e.message)
                 self.redis = None
         finally:
             self.reconnect_count += 1
@@ -76,14 +81,18 @@ class RedisCache(object):
            or self.reconnect_count <= REDIS_RECONNECT_LIMIT:
             self.reconnect()
 
-    def add(self, key, data, expire_at):
+    def _add(self, key, data, expire_at):
         try:
             self.redis.set(key, pickle.dumps(data))
             self.redis.expireat(key, expire_at)
         except redis.ConnectionError:
             self.reconnect()
 
-    def get(self, key):
+    def add(self, key, data, expire_at):
+        with SpinLock(key):
+            self.add(key, data, expire_at)
+
+    def _get(self, key):
         """get a value or get None"""
         if not self.redis: return
         try:
@@ -95,6 +104,10 @@ class RedisCache(object):
             return pickle.loads(data_str)
         except ValueError as e:
             log.exception("redis-cache catch an unkonw error: %s" % e)
+
+    def get(self, key):
+        with SpinLock(key):
+            return self._get(key)
 
 
 cache = RedisCache()
