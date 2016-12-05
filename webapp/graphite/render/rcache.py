@@ -80,17 +80,14 @@ class RedisCache(object):
            or self.reconnect_count <= REDIS_RECONNECT_LIMIT:
             self.reconnect()
 
-    def _add(self, key, data, expire_at):
+    def add(self, key, data, expire_at):
         try:
             self.redis.set(key, pickle.dumps(data))
             self.redis.expireat(key, expire_at)
         except redis.ConnectionError:
             self.reconnect()
 
-    def add(self, key, data, expire_at):
-        self.add(key, data, expire_at)
-
-    def _get(self, key):
+    def get(self, key):
         """get a value or get None"""
         if not self.redis: return
         try:
@@ -102,9 +99,6 @@ class RedisCache(object):
             return pickle.loads(data_str)
         except ValueError as e:
             log.exception("redis-cache catch an unkonw error: %s" % e)
-
-    def get(self, key):
-        return self._get(key)
 
 
 cache = RedisCache()
