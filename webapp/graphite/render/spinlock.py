@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import time
 
 try:
     from graphite.settings import SPINLOCK_ADDRESS
@@ -21,8 +22,11 @@ class SpinLock(object):
         self.locker = None
 
     def acquire(self):
-        while not self.locker:
+        while 1:
+            if self.locker:
+                break
             self.locker = redlock.lock(self.lock_key, SPINLOCK_TIMEOUT * 1000)
+            time.sleep(0.1)
 
     def release(self):
         if self.locker:
