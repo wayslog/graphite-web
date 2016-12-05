@@ -32,16 +32,17 @@ from graphite.compat import HttpResponse
 from graphite.util import getProfileByUsername, json, unpickle
 from graphite.remote_storage import connector_class_selector
 from graphite.logger import log
-from graphite.render.evaluator import evaluateTarget
 from graphite.render.attime import parseATTime
-from graphite.render.functions import PieFunctions
-from graphite.render.hashing import hashRequest, hashData
-from graphite.render.glyph import GraphTypes
+from graphite.render.evaluator import evaluateTarget
 from graphite.render.float_encoder import FloatEncoder
+from graphite.render.functions import PieFunctions
+from graphite.render.glyph import GraphTypes
+from graphite.render.hashing import hashRequest
+from graphite.render.rcache import hashData, cache, epoch_time
+from graphite.render.spinlock import SpinLock
 
 from django.http import HttpResponseServerError, HttpResponseRedirect
 from django.template import Context, loader
-from django.core.cache import cache
 from django.core.exceptions import ObjectDoesNotExist
 from django.conf import settings
 from django.utils.cache import add_never_cache_headers, patch_response_headers
@@ -52,6 +53,7 @@ def renderView(request):
   (graphOptions, requestOptions) = parseOptions(request)
   useCache = 'noCache' not in requestOptions
   cacheTimeout = requestOptions['cacheTimeout']
+  cacheTimeoutAt = epoch_time(time() + cacheTimeout)
   requestContext = {
     'startTime' : requestOptions['startTime'],
     'endTime' : requestOptions['endTime'],
@@ -63,9 +65,11 @@ def renderView(request):
   data = requestContext['data']
 
   # First we check the request cache
+  requestKey = hashRequest(request)
+  locker = SpinLock(requestKey)
   if useCache:
-    requestKey = hashRequest(request)
     cachedResponse = cache.get(requestKey)
+    locker.release()
     if cachedResponse:
       log.cache('Request-Cache hit [%s]' % requestKey)
       log.rendering('Returned cached response in %.6f' % (time() - start))
@@ -117,7 +121,7 @@ def renderView(request):
         data.extend(seriesList)
 
       if useCache:
-        cache.add(dataKey, data, cacheTimeout)
+        cache.add(dataKey, data, cacheTimeoutAt)
 
     # If data is all we needed, we're done
     format = requestOptions.get('format')
@@ -181,7 +185,7 @@ def renderView(request):
                                 content_type='application/json')
 
       if useCache:
-        cache.add(requestKey, response, cacheTimeout)
+        cache.add(requestKey, response, cacheTimeoutAt)
         patch_response_headers(response, cache_timeout=cacheTimeout)
       else:
         add_never_cache_headers(response)
@@ -211,7 +215,8 @@ def renderView(request):
       response = HttpResponse(content=result, content_type='application/json')
 
       if useCache:
-        cache.add(requestKey, response, cacheTimeout)
+        cache.add(requestKey, response, cacheTimeoutAt)
+        locker.release()
         patch_response_headers(response, cache_timeout=cacheTimeout)
       else:
         add_never_cache_headers(response)
@@ -233,7 +238,8 @@ def renderView(request):
                                 content_type='application/json')
 
       if useCache:
-        cache.add(requestKey, response, cacheTimeout)
+        cache.add(requestKey, response, cacheTimeoutAt)
+        locker.release()
         patch_response_headers(response, cache_timeout=cacheTimeout)
       else:
         add_never_cache_headers(response)
@@ -282,7 +288,8 @@ def renderView(request):
     response = buildResponse(image, 'image/svg+xml' if useSVG else 'image/png')
 
   if useCache:
-    cache.add(requestKey, response, cacheTimeout)
+    cache.add(requestKey, response, cacheTimeoutAt)
+    locker.release()
     patch_response_headers(response, cache_timeout=cacheTimeout)
   else:
     add_never_cache_headers(response)
