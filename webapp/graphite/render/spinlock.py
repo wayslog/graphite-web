@@ -12,7 +12,7 @@ SPINLOCK_TIMEOUT = 30
 SPINLOCK_INTERVAL = 0.01
 SPINLOCK_PREFIX = "spinlock_"
 
-redlock = Redlock(SPINLOCK_ADDRESS)
+redlocker = Redlock(SPINLOCK_ADDRESS)
 
 
 class SpinLock(object):
@@ -25,12 +25,12 @@ class SpinLock(object):
         while 1:
             if self.locker:
                 break
-            self.locker = redlock.lock(self.lock_key, SPINLOCK_TIMEOUT * 1000)
+            self.locker = redlocker.lock(self.lock_key, SPINLOCK_TIMEOUT * 1000)
             time.sleep(0.1)
 
     def release(self):
         if self.locker:
-            redlock.unlock(self.locker)
+            redlocker.unlock(self.locker)
             self.locker = None
 
     def __del__(self):
