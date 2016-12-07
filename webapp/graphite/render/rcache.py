@@ -10,12 +10,10 @@ try:
     import cPickle as pickle
 except ImportError:
     import pickle
-
 try:
-    from graphite.settings import CACHE_INTERVAL
-    cache_interval = CACHE_INTERVAL
+    from graphite.settings import DEFAULT_CACHE_DURATION
 except ImportError:
-    cache_interval = 10
+    DEFAULT_CACHE_DURATION = 60
 
 try:
     from graphite.settings import REDIS_ADDRES
@@ -37,9 +35,9 @@ def hashData(targets, start, end, prefix=False):
     return prefix + compactHash(hash_key)
 
 
-def epoch_time(timestamp, interval=cache_interval):
+def epoch_time(timestamp):
     "caculate the up top timestamp by each interval"
-    return (int(timestamp) / interval + 1) * interval
+    return (int(timestamp) / DEFAULT_CACHE_DURATION + 1) * DEFAULT_CACHE_DURATION
 
 
 def epoch_time_str(t):

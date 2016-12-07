@@ -50,10 +50,10 @@ from django.utils.cache import add_never_cache_headers, patch_response_headers
 
 def renderView(request):
   start = time()
+  cacheTimeoutAt = epoch_time(start)
   (graphOptions, requestOptions) = parseOptions(request)
   useCache = 'noCache' not in requestOptions
   cacheTimeout = requestOptions['cacheTimeout']
-  cacheTimeoutAt = epoch_time(time() + cacheTimeout)
   requestContext = {
     'startTime' : requestOptions['startTime'],
     'endTime' : requestOptions['endTime'],
