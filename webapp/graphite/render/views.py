@@ -39,7 +39,7 @@ from graphite.render.functions import PieFunctions
 from graphite.render.glyph import GraphTypes
 from graphite.render.hashing import hashRequest
 from graphite.render.rcache import hashData, cache, epoch_time
-from graphite.render.spinlock import SpinLock
+# from graphite.render.spinlock import SpinLock
 
 from django.http import HttpResponseServerError, HttpResponseRedirect
 from django.template import Context, loader
@@ -66,10 +66,10 @@ def renderView(request):
 
   # First we check the request cache
   requestKey = hashRequest(request)
-  locker = SpinLock(requestKey)
+  # locker = SpinLock(requestKey)
   if useCache:
     cachedResponse = cache.get(requestKey)
-    locker.release()
+    # locker.release()
     if cachedResponse:
       log.cache('Request-Cache hit [%s]' % requestKey)
       log.rendering('Returned cached response in %.6f' % (time() - start))
@@ -216,7 +216,7 @@ def renderView(request):
 
       if useCache:
         cache.add(requestKey, response, cacheTimeoutAt)
-        locker.release()
+        # locker.release()
         patch_response_headers(response, cache_timeout=cacheTimeout)
       else:
         add_never_cache_headers(response)
@@ -239,7 +239,7 @@ def renderView(request):
 
       if useCache:
         cache.add(requestKey, response, cacheTimeoutAt)
-        locker.release()
+        # locker.release()
         patch_response_headers(response, cache_timeout=cacheTimeout)
       else:
         add_never_cache_headers(response)
@@ -289,7 +289,7 @@ def renderView(request):
 
   if useCache:
     cache.add(requestKey, response, cacheTimeoutAt)
-    locker.release()
+    # locker.release()
     patch_response_headers(response, cache_timeout=cacheTimeout)
   else:
     add_never_cache_headers(response)
