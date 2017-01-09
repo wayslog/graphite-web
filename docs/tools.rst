@@ -36,9 +36,9 @@ Collection
 `graphite-pollers <https://github.com/phreakocious/graphite-pollers>`_
   A collection of scripts that shovel data into Graphite including a multi-threaded SNMP poller for network interface IF-MIB statistics and another which pulls linux network stack data from files in /proc/net. Add to cron and go.
 
-`Graphite PowerShell Functions <https://github.com/MattHodge/Graphite-PowerShell-Functions>`_ 
+`Graphite PowerShell Functions <https://github.com/MattHodge/Graphite-PowerShell-Functions>`_
   A group of functions that can be used to collect Windows Performance Counters and send them over to the Graphite server. The main function can be run as a Windows service, and everything is configurable via an XML file.
-  
+
 `HoardD`_
   A Node.js app written in CoffeeScript to send data from servers to Graphite, much like collectd does, but aimed at being easier to expand and with less footprint. It comes by default with basic collectors plus Redis and MySQL metrics, and can be expanded with Javascript or CoffeeScript.
 
@@ -61,7 +61,7 @@ Collection
   A monitoring framework that can route metrics to Graphite. Servers subscribe to sets of checks, so getting metrics from a new server to Graphite is as simple as installing the Sensu client and subscribing.
 
 `SqlToGraphite`_
-  An agent for windows written in .net to collect metrics using plugins (WMI, SQL Server, Oracle) by polling an endpoint with a SQL query and pushing the results into graphite. It uses either a local or a centralised configuration over HTTP. 
+  An agent for windows written in .net to collect metrics using plugins (WMI, SQL Server, Oracle) by polling an endpoint with a SQL query and pushing the results into graphite. It uses either a local or a centralised configuration over HTTP.
 
 `SSC Serv`_
   A Windows service (agent) which periodically publishes system metrics, for example CPU, memory and disk usage. It can store data in Graphite using a naming schema that's identical to that used by collectd.
@@ -94,7 +94,7 @@ Forwarding
 `Graphout`_
   A Node.js application that lets you forward Graphite based queries (using the render API) out to different external services. There are built in modules for Zabbix and CloudWatch. Custom modules are very easy to write.
 
-`Grockets`_ 
+`Grockets`_
   A node.js application which provides streaming JSON data over HTTP from Graphite.
 
 `Gruffalo`_
@@ -108,7 +108,7 @@ Forwarding
 
 `statsd`_
   A simple daemon for easy stats aggregation, developed by the folks at Etsy. A list of forks and alternative implementations can be found at <http://joemiller.me/2011/09/21/list-of-statsd-server-implementations/>
-  
+
 Visualization
 -------------
 
@@ -182,8 +182,11 @@ Visualization
 `Tasseo`_
   A lightweight, easily configurable, real-time dashboard for Graphite metrics.
 
+`Terphite`_
+  Terminal tool for displaying Graphite metrics.
+
 `Tessera`_
-  A flexible front-end for creating dashboards with a wide variety of data presentations. 
+  A flexible front-end for creating dashboards with a wide variety of data presentations.
 
 `TimeseriesWidget`_
   Adds timeseries graphs to your webpages/dashboards using a simple api, focuses on high interactivity and modern features (realtime zooming, datapoint inspection, annotated events, etc). Supports Graphite, flot, rickshaw and anthracite.
@@ -194,13 +197,16 @@ Monitoring
 
 `Cabot`_
   A self-hosted monitoring and alerting server that watches Graphite metrics and can alert on them by phone, SMS, Hipchat or email. It is designed to be deployed to cloud or physical hardware in minutes and configured via web interface.
-  
+
 `graphite-beacon`_
   A simple alerting application for Graphite. It asynchronous and sends notification alerts based on Graphite metrics.
   It hasn't any dependencies except `Tornado` package. Very light and really very easy deployed.
 
 `graphite-to-zabbix`_
   A tool to make zabbix alerts based on Graphite data.
+
+`Moira`_
+  An alerting system based on Graphite data. Moira is a real-time alerting tool, independent from graphite storage, custom expressions and extendable notification channels.
 
 `rearview`_
   A real-time monitoring framework that sits on top of Graphite's time series data. This allows users to create monitors that both visualize and alert on data as it streams from Graphite. The monitors themselves are simple Ruby scripts which run in a sandbox to provide additional security. Monitors are also configured with a crontab compatible time specification used by the scheduler. Alerts can be sent via email, pagerduty, or campfire.
@@ -238,6 +244,9 @@ Other
 `bosun`_
   Time Series Alerting Framework. Can use Graphite as time series source.
 
+`Bryans-Graphite-Tools`_
+  A collection of miscellaneous scripts for pulling data from various devices, F5, Infoblox, Nutanix, etc.
+
 `buckytools`_
   Go implementation of useful tools for dealing with Graphite's Whisper DBs and Carbon hashing.
 
@@ -258,12 +267,13 @@ Other
 .. _Backstop: https://github.com/obfuscurity/backstop
 .. _bosun: http://bosun.org
 .. _Brubeck: https://github.com/github/brubeck
+.. _Bryans-Graphite-Tools: https://github.com/linkslice/graphite-tools
 .. _Bucky: http://pypi.python.org/pypi/bucky
 .. _buckytools: https://github.com/jjneely/buckytools
 .. _Cabot: https://github.com/arachnys/cabot
 .. _carbon-c-relay: https://github.com/grobian/carbon-c-relay
 .. _carbon-relay-ng: https://github.com/graphite-ng/carbon-relay-ng
-.. _carbonate: https://github.com/jssjr/carbonate
+.. _carbonate: https://github.com/graphite-project/carbonate
 .. _Ceres: https://github.com/graphite-project/ceres
 .. _Charcoal: https://github.com/cebailey59/charcoal
 .. _collectd: http://collectd.org
@@ -316,6 +326,7 @@ Other
 .. _OpenTSDB: http://opentsdb.net/
 .. _Orion: https://github.com/gree/Orion
 .. _metrics-sampler: https://github.com/dimovelev/metrics-sampler
+.. _Moira: http://moira.readthedocs.org
 .. _New Relic: https://newrelic.com/platform
 .. _Pencil: https://github.com/fetep/pencil
 .. _pipe-to-graphite: https://github.com/iFixit/pipe-to-graphite
@@ -331,6 +342,7 @@ Other
 .. _SSC Serv: https://ssc-serv.com
 .. _statsd: https://github.com/etsy/statsd
 .. _Tasseo: https://github.com/obfuscurity/tasseo
+.. _Terphite: https://github.com/benwtr/terphite
 .. _Tessera: https://github.com/urbanairship/tessera
 .. _Therry: https://github.com/obfuscurity/therry
 .. _TimeseriesWidget: https://github.com/Dieterbe/timeserieswidget

@@ -63,21 +63,30 @@ class StandardFinder:
                   reader = RRDReader(absolute_path, datasource_name)
                   yield LeafNode(metric_path + "." + datasource_name, reader)
 
+
   def _find_paths(self, current_dir, patterns):
     """Recursively generates absolute paths whose components underneath current_dir
     match the corresponding pattern in patterns"""
     pattern = patterns[0]
     patterns = patterns[1:]
-    try:
-      entries = os.listdir(current_dir)
-    except OSError as e:
-      log.exception(e)
-      entries = []
+
+    has_wildcard = pattern.find('{') > -1 or pattern.find('[') > -1 or pattern.find('*') > -1 or pattern.find('?') > -1
+
+    if has_wildcard: # this avoids os.listdir() for performance
+      try:
+        entries = os.listdir(current_dir)
+      except OSError as e:
+        log.exception(e)
+        entries = []
+    else:
+      entries = [ pattern ]
 
     subdirs = [entry for entry in entries if isdir(join(current_dir, entry))]
     matching_subdirs = match_entries(subdirs, pattern)
 
     if len(patterns) == 1 and RRDReader.supported: #the last pattern may apply to RRD data sources
+      if not has_wildcard:
+        entries = [ pattern + ".rrd" ]
       files = [entry for entry in entries if isfile(join(current_dir, entry))]
       rrd_files = match_entries(files, pattern + ".rrd")
 
@@ -96,6 +105,8 @@ class StandardFinder:
           yield match
 
     else: #we've got the last pattern
+      if not has_wildcard:
+        entries = [ pattern + '.wsp', pattern + '.wsp.gz', pattern + '.rrd' ]
       files = [entry for entry in entries if isfile(join(current_dir, entry))]
       matching_files = match_entries(files, pattern + '.*')
 

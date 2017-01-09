@@ -187,7 +187,6 @@ def sumSeries(requestContext, *seriesLists):
   of the other metrics is averaged for the metrics with finer retention rates.
 
   """
-
   try:
     (seriesList,start,end,step) = normalize(seriesLists)
   except:
@@ -580,7 +579,7 @@ def divideSeries(requestContext, dividendSeriesList, divisorSeries):
 
   """
   if len(divisorSeries) != 1:
-    raise ValueError("divideSeries second argument must reference exactly 1 series")
+    raise ValueError("divideSeries second argument must reference exactly 1 series (got {0})".format(len(divisorSeries)))
 
   divisorSeries = divisorSeries[0]
   results = []
@@ -2372,6 +2371,67 @@ def holtWintersConfidenceArea(requestContext, seriesList, delta=3):
     series.name = series.name.replace('areaBetween', 'holtWintersConfidenceArea')
   return results
 
+def linearRegressionAnalysis(series):
+  """
+  Returns factor and offset of linear regression function by least squares method.
+  """
+  n = safeLen(series)
+  sumI = sum([i for i,v in enumerate(series) if v is not None])
+  sumV = sum([v for i,v in enumerate(series) if v is not None])
+  sumII = sum([i*i for i,v in enumerate(series) if v is not None])
+  sumIV = sum([i*v for i,v in enumerate(series) if v is not None])
+  denominator = float(n*sumII - sumI*sumI)
+  if denominator == 0:
+    return None
+  else:
+    factor = (n * sumIV - sumI * sumV) / denominator / series.step
+    offset = (sumII * sumV - sumIV * sumI) /denominator - factor * series.start
+    return factor, offset
+
+def linearRegression(requestContext, seriesList, startSourceAt=None, endSourceAt=None):
+  """
+  Graphs the liner regression function by least squares method.
+
+  Takes one metric or a wildcard seriesList, followed by a quoted string with the
+  time to start the line and another quoted string with the time to end the line.
+  The start and end times are inclusive (default range is from to until). See
+  ``from / until`` in the render\_api_ for examples of time formats. Datapoints
+  in the range is used to regression.
+
+  Example:
+
+  .. code-block:: none
+
+    &target=linearRegression(Server.instance01.threads.busy, '-1d')
+    &target=linearRegression(Server.instance*.threads.busy, "00:00 20140101","11:59 20140630")
+  """
+  results = []
+  sourceContext = requestContext.copy()
+  if startSourceAt is not None: sourceContext['startTime'] = parseATTime(startSourceAt)
+  if endSourceAt is not None: sourceContext['endTime'] = parseATTime(endSourceAt)
+
+  sourceList = []
+  for series in seriesList:
+    source = evaluateTarget(sourceContext, series.pathExpression)
+    sourceList.extend(source)
+
+  for source,series in zip(sourceList, seriesList):
+    newName = 'linearRegression(%s, %s, %s)' % (
+        series.name,
+        int(time.mktime(sourceContext['startTime'].timetuple())),
+        int(time.mktime(sourceContext['endTime'].timetuple()))
+        )
+    forecast = linearRegressionAnalysis(source)
+    if forecast is None:
+      continue
+    factor, offset = forecast
+    values = [ offset + (series.start + i * series.step) * factor for i in range(len(series)) ]
+    newSeries = TimeSeries(newName, series.start, series.end, series.step, values)
+    newSeries.pathExpression = newSeries.name
+    results.append(newSeries)
+  return results
+
+
 def drawAsInfinite(requestContext, seriesList):
   """
   Takes one metric or a wildcard seriesList.
@@ -2897,6 +2957,57 @@ def reduceSeries(requestContext, seriesLists, reduceFunction, reduceNode, *reduc
     metaSeries[key].name = key
   return [ metaSeries[key] for key in keys ]
 
+def applyByNode(requestContext, seriesList, nodeNum, templateFunction, newName=None):
+  """
+  Takes a seriesList and applies some complicated function (described by a string), replacing templates with unique
+  prefixes of keys from the seriesList (the key is all nodes up to the index given as `nodeNum`).
+
+  If the `newName` paramter is provided, the name of the resulting series will be given by that parameter, with any
+  "%" characters replaced by the unique prefix.
+
+  **Example**
+
+  ...code-block:: none
+
+      &target=applyByNode(servers.*.disk.bytes_free,1,"divideSeries(%.disk.bytes_free,sumSeries(%.disk.bytes_*))")
+
+  Would find all series which match `servers.*.disk.bytes_free`, then trim them down to unique series up to the node
+  given by nodeNum, then fill them into the template function provided (replacing % by the prefixes).
+
+  **Additional Examples**
+
+  Given keys of
+
+    - `stats.counts.haproxy.web.2XX`
+    - `stats.counts.haproxy.web.3XX`
+    - `stats.counts.haproxy.web.5XX`
+    - `stats.counts.haproxy.microservice.2XX`
+    - `stats.counts.haproxy.microservice.3XX`
+    - `stats.counts.haproxy.microservice.5XX`
+
+  The following will return the rate of 5XX's per service:
+
+  ...code-block:: none
+
+     applyByNode(stats.counts.haproxy.*.*XX, 3, "asPercent(%.2XX, sumSeries(%.*XX))", "%.pct_5XX")
+
+  The output series would have keys `stats.counts.haproxy.web.pct_5XX` and `stats.counts.haproxy.microservice.pct_5XX`.
+  """
+  prefixes = set()
+  for series in seriesList:
+    prefix = '.'.join(series.name.split('.')[:nodeNum + 1])
+    prefixes.add(prefix)
+  results = []
+  for prefix in sorted(prefixes):
+    for resultSeries in evaluateTarget(requestContext, templateFunction.replace('%', prefix)):
+      if newName:
+        resultSeries.name = newName.replace('%', prefix)
+      resultSeries.pathExpression = prefix
+      resultSeries.start = series.start
+      resultSeries.end = series.end
+      results.append(resultSeries)
+  return results
+
 def groupByNode(requestContext, seriesList, nodeNum, callback):
   """
   Takes a serieslist and maps a callback to subgroups within as defined by a common node
@@ -3147,11 +3258,11 @@ def hitcount(requestContext, seriesList, intervalString, alignToInterval = False
     requestContext = requestContext.copy()
     s = requestContext['startTime']
     if interval >= DAY:
-      requestContext['startTime'] = datetime(s.year, s.month, s.day)
+      requestContext['startTime'] = datetime(s.year, s.month, s.day, tzinfo=s.tzinfo)
     elif interval >= HOUR:
-      requestContext['startTime'] = datetime(s.year, s.month, s.day, s.hour)
+      requestContext['startTime'] = datetime(s.year, s.month, s.day, s.hour, tzinfo=s.tzinfo)
     elif interval >= MINUTE:
-      requestContext['startTime'] = datetime(s.year, s.month, s.day, s.hour, s.minute)
+      requestContext['startTime'] = datetime(s.year, s.month, s.day, s.hour, s.minute, tzinfo=s.tzinfo)
 
     for i,series in enumerate(seriesList):
       newSeries = evaluateTarget(requestContext, series.pathExpression)[0]
@@ -3431,6 +3542,7 @@ SeriesFunctions = {
   'holtWintersConfidenceBands': holtWintersConfidenceBands,
   'holtWintersConfidenceArea': holtWintersConfidenceArea,
   'holtWintersAberration': holtWintersAberration,
+  'linearRegression': linearRegression,
   'asPercent': asPercent,
   'pct': asPercent,
   'diffSeries': diffSeries,
@@ -3494,6 +3606,7 @@ SeriesFunctions = {
   'mapSeries': mapSeries,
   'reduce': reduceSeries,
   'reduceSeries': reduceSeries,
+  'applyByNode': applyByNode,
   'groupByNode': groupByNode,
   'constantLine': constantLine,
   'stacked': stacked,

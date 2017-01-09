@@ -2,6 +2,7 @@ import copy
 import math
 import pytz
 from datetime import datetime
+from fnmatch import fnmatch
 
 from django.test import TestCase
 from django.conf import settings
@@ -436,3 +437,67 @@ class FunctionsTest(TestCase):
         seriesList = [TimeSeries("foo", 0, 1, 1, [-10000, -20000, -30000, -40000])]
         result = functions.legendValue({}, seriesList, "avg", "si")
         self.assertEqual(result[0].name, "foo                 avg  -25.00K   ")
+
+    def test_linearRegression(self):
+        original = functions.evaluateTarget
+        try:
+            # series starts at 60 seconds past the epoch and continues for 600 seconds (ten minutes)
+            # steps are every 60 seconds
+            savedSeries = TimeSeries('test.value',180,480,60,[3,None,5,6,None,8]),
+            functions.evaluateTarget = lambda x, y: savedSeries
+
+            # input values will be ignored and replaced by regression function
+            inputSeries = TimeSeries('test.value',1200,1500,60,[123,None,None,456,None,None,None])
+            inputSeries.pathExpression = 'test.value'
+            results = functions.linearRegression({
+                'startTime': datetime(1970, 1, 1, 0, 20, 0, 0, pytz.timezone(settings.TIME_ZONE)),
+                'endTime': datetime(1970, 1, 1, 0, 25, 0, 0, pytz.timezone(settings.TIME_ZONE)),
+                'localOnly': False,
+                'data': [],
+            }, [ inputSeries ], '00:03 19700101', '00:08 19700101')
+
+            # regression function calculated from datapoints on minutes 3 to 8
+            expectedResult = [
+                TimeSeries('linearRegression(test.value, 180, 480)',1200,1500,60,[20.0,21.0,22.0,23.0,24.0,25.0,26.0])
+            ]
+
+            self.assertEqual(results, expectedResult)
+        finally:
+            functions.evaluateTarget = original
+
+    def test_applyByNode(self):
+        seriesList = [
+            TimeSeries('servers.s1.disk.bytes_used', 0, 3, 1, [10, 20, 30]),
+            TimeSeries('servers.s1.disk.bytes_free', 0, 3, 1, [90, 80, 70]),
+            TimeSeries('servers.s2.disk.bytes_used', 0, 3, 1, [1, 2, 3]),
+            TimeSeries('servers.s2.disk.bytes_free', 0, 3, 1, [99, 98, 97])
+        ]
+        for series in seriesList:
+            series.pathExpression = series.name
+
+        def mock_data_fetcher(reqCtx, path_expression):
+            rv = []
+            for s in seriesList:
+                if s.name == path_expression or fnmatch(s.name, path_expression):
+                    rv.append(s)
+            if rv:
+                return rv
+            raise KeyError('{} not found!'.format(path_expression))
+
+        expectedResults = [
+            TimeSeries('servers.s1.disk.pct_used', 0, 3, 1, [0.10, 0.20, 0.30]),
+            TimeSeries('servers.s2.disk.pct_used', 0, 3, 1, [0.01, 0.02, 0.03])
+        ]
+
+        with patch('graphite.render.evaluator.fetchData', mock_data_fetcher):
+            result = functions.applyByNode(
+                {
+                    'startTime': datetime(1970, 1, 1, 0, 0, 0, 0, pytz.timezone(settings.TIME_ZONE)),
+                    'endTime': datetime(1970, 1, 1, 0, 9, 0, 0, pytz.timezone(settings.TIME_ZONE)),
+                    'localOnly': False,
+                },
+                seriesList, 1,
+                'divideSeries(%.disk.bytes_used, sumSeries(%.disk.bytes_*))',
+                '%.disk.pct_used'
+            )
+        self.assertEqual(result, expectedResults)
